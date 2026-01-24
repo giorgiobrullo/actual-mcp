@@ -1,6 +1,11 @@
 # Actual Budget MCP Server
 
-MCP server for integrating Actual Budget with Claude and other LLM assistants.
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![MCP](https://img.shields.io/badge/MCP-000000?style=for-the-badge&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
+[![Actual Budget](https://img.shields.io/badge/Actual_Budget-5B21B6?style=for-the-badge)](https://actualbudget.com/)
+
+MCP server for integrating Actual Budget with Claude and other LLM assistants. This is a soft fork of [s-stefanov/actual-mcp](https://github.com/s-stefanov/actual-mcp) with additional features for batch operations, budget management, scheduled transactions, and transfer handling. This fork is configured to build against the [Actual Budget source](https://github.com/actualbudget/actual) (`@actual-app/api` points to `file:../actual/packages/api`), so you'll need a local clone of the Actual repo as a sibling directory or update the dependency to use the published npm package.
 
 ## Overview
 
@@ -18,11 +23,23 @@ The Actual Budget MCP Server allows you to interact with your personal financial
 
 #### Transaction & Account Management
 
-- **`get-transactions`** - Retrieve and filter transactions by account, date, amount, category, or payee
+- **`get-transactions`** - Retrieve and filter transactions by account, date, amount, category, payee, notes, or uncategorized status. Supports searching across all accounts.
 - **`create-transaction`** - Create a new transaction in an account with optional category, payee, and notes
-- **`update-transaction`** - Update an existing transaction with new category, payee, notes, or amount
+- **`update-transaction`** - Update an existing transaction with new category, payee, notes, amount, or convert to a transfer between accounts
+- **`batch-update-transactions`** - Update multiple transactions at once for bulk categorization or transfer conversion (up to 100 per call)
+- **`delete-transaction`** - Delete a transaction
 - **`get-accounts`** - Retrieve a list of all accounts with their current balance and ID
 - **`balance-history`** - View account balance changes over time
+- **`run-bank-sync`** - Trigger bank sync for connected accounts
+
+#### Budget Management
+
+- **`get-budget`** - Get budget data for a specific month showing budgeted amounts and spending by category
+- **`set-budget`** - Set the budget amount for a category in a specific month
+
+#### Scheduled Transactions
+
+- **`get-schedules`** - Retrieve all scheduled/recurring transactions with their frequency and next date
 
 #### Reporting & Analytics
 
@@ -62,41 +79,36 @@ The Actual Budget MCP Server allows you to interact with your personal financial
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16 or higher)
-- [Actual Budget](https://actualbudget.com/) installed and configured
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [Yarn](https://yarnpkg.com/) (for building Actual source)
+- [Actual Budget source](https://github.com/actualbudget/actual) cloned as a sibling directory
+- [Actual Budget](https://actualbudget.com/) server running with your data
 - [Claude Desktop](https://claude.ai/download) or another MCP-compatible client
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) (optional)
 
-### Remote access
+### Setup
 
-Pull the latest docker image:
-
-```
-docker pull sstefanov/actual-mcp:latest
-```
-
-### Local setup
-
-1. Clone the repository:
+This fork builds against the Actual Budget source, so you need both repos as siblings:
 
 ```bash
-git clone https://github.com/s-stefanov/actual-mcp.git
-cd actual-mcp
-```
+# Clone both repositories as siblings
+git clone https://github.com/actualbudget/actual.git
+git clone https://github.com/giorgiobrullo/actual-mcp.git
 
-2. Install dependencies:
+# Build Actual first
+cd actual
+yarn install
+yarn build
 
-```bash
+# Then build the MCP server
+cd ../actual-mcp
 npm install
-```
-
-3. Build the server:
-
-```bash
 npm run build
 ```
 
-4. Build the local docker image (optional):
+> If you prefer using the published npm package instead, update `package.json` to replace `"@actual-app/api": "file:../actual/packages/api"` with `"@actual-app/api": "^x.x.x"` (check npm for the latest version).
+
+Build the local docker image (optional):
 
 ```bash
 docker build -t <local-image-name> .
@@ -141,67 +153,19 @@ On Windows:
 code %APPDATA%\Claude\claude_desktop_config.json
 ```
 
-Add the following to your configuration...
-
-### a. Using Node.js (npx version):
-
-```json
-{
-  "mcpServers": {
-    "actualBudget": {
-      "command": "npx",
-      "args": ["-y", "actual-mcp", "--enable-write"],
-      "env": {
-        "ACTUAL_DATA_DIR": "path/to/your/data",
-        "ACTUAL_PASSWORD": "your-password",
-        "ACTUAL_SERVER_URL": "http://your-actual-server.com",
-        "ACTUAL_BUDGET_SYNC_ID": "your-budget-id"
-      }
-    }
-  }
-}
-
-### a. Using Node.js (local only):
+Add the following to your configuration:
 
 ```json
 {
   "mcpServers": {
     "actualBudget": {
       "command": "node",
-      "args": ["/path/to/your/clone/build/index.js", "--enable-write"],
+      "args": ["/path/to/actual-mcp/build/index.js", "--enable-write"],
       "env": {
-        "ACTUAL_DATA_DIR": "path/to/your/data",
         "ACTUAL_PASSWORD": "your-password",
         "ACTUAL_SERVER_URL": "http://your-actual-server.com",
         "ACTUAL_BUDGET_SYNC_ID": "your-budget-id"
       }
-    }
-  }
-}
-```
-
-### b. Using Docker (local or remote images):
-
-```json
-{
-  "mcpServers": {
-    "actualBudget": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "-v",
-        "/path/to/your/data:/data",
-        "-e",
-        "ACTUAL_PASSWORD=your-password",
-        "-e",
-        "ACTUAL_SERVER_URL=https://your-actual-server.com",
-        "-e",
-        "ACTUAL_BUDGET_SYNC_ID=your-budget-id",
-        "sstefanov/actual-mcp:latest",
-        "--enable-write"
-      ]
     }
   }
 }
@@ -209,28 +173,7 @@ Add the following to your configuration...
 
 After saving the configuration, restart Claude Desktop.
 
-> 💡 `ACTUAL_DATA_DIR` is optional if you're using `ACTUAL_SERVER_URL`.
-
-> 💡 Use `--enable-write` to enable write-access tools.
-
-## Running an SSE Server
-
-To expose the server over a port using Docker:
-
-```bash
-docker run -i --rm \
-  -p 3000:3000 \
-  -v "/path/to/your/data:/data" \
-  -e ACTUAL_PASSWORD="your-password" \
-  -e ACTUAL_SERVER_URL="http://your-actual-server.com" \
-  -e ACTUAL_BUDGET_SYNC_ID="your-budget-id" \
-  -e BEARER_TOKEN="your-bearer-token" \
-  sstefanov/actual-mcp:latest \
-  --sse --enable-write --enable-bearer
-```
-
-> ⚠️ Important: When using --enable-bearer, the BEARER_TOKEN environment variable must be set.  
-> 🔒 This is highly recommended if you're exposing your server via a public URL.
+> Use `--enable-write` to enable write-access tools.
 
 ## Example Queries
 
@@ -241,6 +184,10 @@ Once connected, you can ask Claude questions like:
 - "How much did I spend on groceries in January?"
 - "What's my savings rate over the past 3 months?"
 - "Analyze my budget and suggest areas to improve"
+- "Find all uncategorized transactions and categorize them"
+- "Show me my budget for this month"
+- "What scheduled transactions do I have coming up?"
+- "Find transactions with my name as payee and convert them to transfers"
 
 ## Usage with Codex CLI
 

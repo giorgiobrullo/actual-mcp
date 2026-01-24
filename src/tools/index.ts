@@ -29,8 +29,12 @@ import * as updateRule from './rules/update-rule/index.js';
 import * as spendingByCategory from './spending-by-category/index.js';
 import * as deleteTransaction from './delete-transaction/index.js';
 import * as updateTransaction from './update-transaction/index.js';
+import * as batchUpdateTransactions from './batch-update-transactions/index.js';
 import * as createTransaction from './create-transaction/index.js';
 import * as runBankSync from './run-bank-sync/index.js';
+import * as getBudget from './budget/get-budget/index.js';
+import * as setBudget from './budget/set-budget/index.js';
+import * as getSchedules from './schedules/get-schedules/index.js';
 
 const readTools = [
   getTransactions,
@@ -41,6 +45,8 @@ const readTools = [
   getGroupedCategories,
   getPayees,
   getRules,
+  getBudget,
+  getSchedules,
 ];
 
 const writeTools = [
@@ -57,9 +63,11 @@ const writeTools = [
   updateRule,
   deleteRule,
   updateTransaction,
+  batchUpdateTransactions,
   deleteTransaction,
   createTransaction,
   runBankSync,
+  setBudget,
 ];
 
 export const setupTools = (server: Server, enableWrite: boolean): void => {

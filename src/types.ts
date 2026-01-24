@@ -14,13 +14,15 @@ export interface BudgetFile {
 
 // Type definitions for tool arguments
 export const GetTransactionsArgsSchema = z.object({
-  accountId: z.string(),
+  accountId: z.string().optional().describe('Account ID to filter by. If omitted, searches all accounts.'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   minAmount: z.number().optional(),
   maxAmount: z.number().optional(),
   categoryName: z.string().optional(),
   payeeName: z.string().optional(),
+  notes: z.string().optional().describe('Filter transactions containing this text in notes'),
+  uncategorized: z.boolean().optional().describe('If true, only return transactions without a category'),
   limit: z.number().optional(),
 });
 
@@ -96,6 +98,12 @@ export const UpdateTransactionArgsSchema = z.object({
     .describe(
       'If given, a payee will be created with this name. If this matches an already existing payee, that payee will be used.'
     ),
+  transfer_account: z
+    .string()
+    .optional()
+    .describe(
+      'The ID of the account to transfer to. This will automatically set the correct transfer payee. Use this to mark a transaction as a transfer.'
+    ),
   imported_payee: z
     .string()
     .optional()
@@ -122,6 +130,17 @@ export type UpdateTransactionArgs = z.infer<typeof UpdateTransactionArgsSchema>;
 // Schema for update data passed to the API (without id, which is passed separately)
 export const UpdateTransactionDataSchema = UpdateTransactionArgsSchema.omit({ id: true });
 export type UpdateTransactionData = z.infer<typeof UpdateTransactionDataSchema>;
+
+// Schema for batch updating transactions
+export const BatchUpdateTransactionsArgsSchema = z.object({
+  updates: z
+    .array(UpdateTransactionArgsSchema)
+    .min(1)
+    .max(100)
+    .describe('Array of transaction updates. Each must include id and at least one field to update. Maximum 100 updates per call.'),
+});
+
+export type BatchUpdateTransactionsArgs = z.infer<typeof BatchUpdateTransactionsArgsSchema>;
 
 export const SubtransactionSchema = z.object({
   amount: z.number().describe('Required for subtransactions. A currency amount as an integer'),
@@ -219,3 +238,18 @@ export interface MonthBalance {
   balance: number;
   transactions: number;
 }
+
+// Budget schemas
+export const GetBudgetArgsSchema = z.object({
+  month: z.string().optional().describe('Month in YYYY-MM format. If omitted, returns current month.'),
+});
+
+export type GetBudgetArgs = z.infer<typeof GetBudgetArgsSchema>;
+
+export const SetBudgetArgsSchema = z.object({
+  month: z.string().describe('Month in YYYY-MM format'),
+  categoryId: z.string().describe('The ID of the category to set budget for'),
+  amount: z.number().describe('Budget amount as an integer (e.g., 10000 for $100.00)'),
+});
+
+export type SetBudgetArgs = z.infer<typeof SetBudgetArgsSchema>;

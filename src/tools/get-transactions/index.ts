@@ -11,14 +11,14 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export const schema = {
   name: 'get-transactions',
-  description: 'Get transactions for an account with optional filtering',
+  description: 'Get transactions with optional filtering. Can search across all accounts or filter by specific account.',
   inputSchema: zodToJsonSchema(GetTransactionsArgsSchema) as ToolInput,
 };
 
 export async function handler(args: GetTransactionsArgs): Promise<CallToolResult> {
   try {
     const input = new GetTransactionsInputParser().parse(args);
-    const { accountId, startDate, endDate, minAmount, maxAmount, categoryName, payeeName, limit } = input;
+    const { accountId, startDate, endDate, minAmount, maxAmount, categoryName, payeeName, notes, uncategorized, limit } = input;
     const { startDate: start, endDate: end } = getDateRange(startDate, endDate);
 
     // Fetch transactions
@@ -31,6 +31,9 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
     if (maxAmount !== undefined) {
       filtered = filtered.filter((t) => t.amount <= maxAmount * 100);
     }
+    if (uncategorized) {
+      filtered = filtered.filter((t) => !t.category && !t.category_name);
+    }
     if (categoryName) {
       const lowerCategory = categoryName.toLowerCase();
       filtered = filtered.filter((t) => (t.category_name || '').toLowerCase().includes(lowerCategory));
@@ -38,6 +41,10 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
     if (payeeName) {
       const lowerPayee = payeeName.toLowerCase();
       filtered = filtered.filter((t) => (t.payee_name || '').toLowerCase().includes(lowerPayee));
+    }
+    if (notes) {
+      const lowerNotes = notes.toLowerCase();
+      filtered = filtered.filter((t) => (t.notes || '').toLowerCase().includes(lowerNotes));
     }
     if (limit && filtered.length > limit) {
       filtered = filtered.slice(0, limit);
@@ -48,11 +55,14 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
 
     // Build filter description
     const filterDescription = [
+      accountId ? `Account: ${accountId}` : 'All accounts',
       startDate || endDate ? `Date range: ${startDate} to ${endDate}` : null,
       minAmount !== undefined ? `Min amount: $${minAmount.toFixed(2)}` : null,
       maxAmount !== undefined ? `Max amount: $${maxAmount.toFixed(2)}` : null,
+      uncategorized ? 'Uncategorized only' : null,
       categoryName ? `Category: ${categoryName}` : null,
       payeeName ? `Payee: ${payeeName}` : null,
+      notes ? `Notes: "${notes}"` : null,
     ]
       .filter(Boolean)
       .join(', ');

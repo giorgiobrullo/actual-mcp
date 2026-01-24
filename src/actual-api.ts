@@ -38,11 +38,18 @@ export async function initActualApi(): Promise<void> {
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
-    await api.init({
-      dataDir,
-      serverURL: process.env.ACTUAL_SERVER_URL,
-      password: process.env.ACTUAL_PASSWORD,
-    });
+
+    // Build init config based on available environment variables
+    const serverURL = process.env.ACTUAL_SERVER_URL;
+    const password = process.env.ACTUAL_PASSWORD;
+
+    if (serverURL && password) {
+      await api.init({ dataDir, serverURL, password });
+    } else if (serverURL) {
+      throw new Error('ACTUAL_SERVER_URL is set but ACTUAL_PASSWORD is missing');
+    } else {
+      await api.init({ dataDir });
+    }
 
     const budgets: BudgetFile[] = await api.getBudgets();
     if (!budgets || budgets.length === 0) {
@@ -98,7 +105,7 @@ export async function getAccounts(): Promise<APIAccountEntity[]> {
  */
 export async function getCategories(): Promise<APICategoryEntity[]> {
   await initActualApi();
-  return api.getCategories();
+  return api.getCategories() as Promise<APICategoryEntity[]>;
 }
 
 /**
@@ -133,6 +140,38 @@ export async function getRules(): Promise<RuleEntity[]> {
   return api.getRules();
 }
 
+/**
+ * Get all budget months (ensures API is initialized)
+ */
+export async function getBudgetMonths(): Promise<string[]> {
+  await initActualApi();
+  return api.getBudgetMonths();
+}
+
+/**
+ * Get budget data for a specific month (ensures API is initialized)
+ */
+export async function getBudgetMonth(month: string): Promise<unknown> {
+  await initActualApi();
+  return api.getBudgetMonth(month);
+}
+
+/**
+ * Set budget amount for a category in a month (ensures API is initialized)
+ */
+export async function setBudgetAmount(month: string, categoryId: string, amount: number): Promise<void> {
+  await initActualApi();
+  return api.setBudgetAmount(month, categoryId, amount);
+}
+
+/**
+ * Get all schedules (ensures API is initialized)
+ */
+export async function getSchedules(): Promise<unknown[]> {
+  await initActualApi();
+  return api.getSchedules();
+}
+
 // ----------------------------
 // ACTION
 // ----------------------------
@@ -142,7 +181,7 @@ export async function getRules(): Promise<RuleEntity[]> {
  */
 export async function createPayee(args: Record<string, unknown>): Promise<string> {
   await initActualApi();
-  return api.createPayee(args);
+  return api.createPayee(args as Omit<APIPayeeEntity, 'id'>);
 }
 
 /**
@@ -166,7 +205,7 @@ export async function deletePayee(id: string): Promise<unknown> {
  */
 export async function createRule(args: Record<string, unknown>): Promise<RuleEntity> {
   await initActualApi();
-  return api.createRule(args);
+  return api.createRule(args as Omit<RuleEntity, 'id'>);
 }
 
 /**
@@ -174,7 +213,7 @@ export async function createRule(args: Record<string, unknown>): Promise<RuleEnt
  */
 export async function updateRule(args: Record<string, unknown>): Promise<RuleEntity> {
   await initActualApi();
-  return api.updateRule(args);
+  return api.updateRule(args as RuleEntity);
 }
 
 /**
@@ -190,7 +229,7 @@ export async function deleteRule(id: string): Promise<boolean> {
  */
 export async function createCategory(args: Record<string, unknown>): Promise<string> {
   await initActualApi();
-  return api.createCategory(args);
+  return api.createCategory(args as Omit<APICategoryEntity, 'id'>);
 }
 
 /**
@@ -214,7 +253,7 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
  */
 export async function createCategoryGroup(args: Record<string, unknown>): Promise<string> {
   await initActualApi();
-  return api.createCategoryGroup(args);
+  return api.createCategoryGroup(args as Omit<APICategoryGroupEntity, 'id'>);
 }
 
 /**
@@ -246,7 +285,7 @@ export async function createTransaction(accountId: string, data: TransactionData
  */
 export async function updateTransaction(id: string, data: UpdateTransactionData): Promise<unknown> {
   await initActualApi();
-  return api.updateTransaction(id, data);
+  return api.updateTransaction(id, data as Parameters<typeof api.updateTransaction>[1]);
 }
 
 /**
