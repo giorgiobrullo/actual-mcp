@@ -19,7 +19,18 @@ export const schema = {
 export async function handler(args: GetTransactionsArgs): Promise<CallToolResult> {
   try {
     const input = new GetTransactionsInputParser().parse(args);
-    const { accountId, startDate, endDate, minAmount, maxAmount, categoryName, payeeName, limit } = input;
+    const {
+      accountId,
+      startDate,
+      endDate,
+      minAmount,
+      maxAmount,
+      categoryName,
+      payeeName,
+      notes,
+      uncategorized,
+      limit,
+    } = input;
     const { startDate: start, endDate: end } = getDateRange(startDate, endDate);
 
     // Fetch transactions
@@ -42,6 +53,14 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
       const lowerPayee = payeeName.toLowerCase();
       filtered = filtered.filter((t) => (t.payee_name || '').toLowerCase().includes(lowerPayee));
     }
+    if (notes) {
+      const lowerNotes = notes.toLowerCase();
+      filtered = filtered.filter((t) => (t.notes || '').toLowerCase().includes(lowerNotes));
+    }
+    if (uncategorized) {
+      // Reason: transfers and split parents carry no category by design, so they are not "uncategorized".
+      filtered = filtered.filter((t) => !t.category && !t.transfer_id && !t.is_parent);
+    }
     if (limit && filtered.length > limit) {
       filtered = filtered.slice(0, limit);
     }
@@ -56,6 +75,8 @@ export async function handler(args: GetTransactionsArgs): Promise<CallToolResult
       maxAmount !== undefined ? `Max amount: $${maxAmount.toFixed(2)}` : null,
       categoryName ? `Category: ${categoryName}` : null,
       payeeName ? `Payee: ${payeeName}` : null,
+      notes ? `Notes: "${notes}"` : null,
+      uncategorized ? 'Uncategorized only' : null,
     ]
       .filter(Boolean)
       .join(', ');

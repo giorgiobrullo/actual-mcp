@@ -20,6 +20,8 @@ export const GetTransactionsArgsSchema = z.object({
   maxAmount: z.number().optional(),
   categoryName: z.string().optional(),
   payeeName: z.string().optional(),
+  notes: z.string().optional().describe('Only return transactions whose notes contain this text (case-insensitive)'),
+  uncategorized: z.boolean().optional().describe('If true, only return transactions without a category'),
   limit: z.number().optional(),
 });
 
@@ -114,6 +116,14 @@ export const UpdateTransactionArgsSchema = z.object({
     .optional()
     .describe('A unique id usually given by the bank, if importing. Use this to avoid duplicate transactions'),
   cleared: z.boolean().optional().describe('A flag indicating if the transaction has cleared or not'),
+  transfer_account_id: z
+    .string()
+    .optional()
+    .describe(
+      'The ID of the destination account to turn this transaction into a transfer. The transfer payee is resolved ' +
+        'automatically and overrides payee. If the destination account already has the counterpart (e.g. from bank ' +
+        'sync), check for a duplicate there afterwards.'
+    ),
   subtransactions: z
     .array(UpdateSubtransactionSchema)
     .optional()
@@ -123,6 +133,16 @@ export const UpdateTransactionArgsSchema = z.object({
 });
 
 export type UpdateTransactionArgs = z.infer<typeof UpdateTransactionArgsSchema>;
+
+export const BatchUpdateTransactionsArgsSchema = z.object({
+  updates: z
+    .array(UpdateTransactionArgsSchema)
+    .min(1)
+    .max(100)
+    .describe('Transaction updates, each with an id and at least one field to change. Maximum 100 per call.'),
+});
+
+export type BatchUpdateTransactionsArgs = z.infer<typeof BatchUpdateTransactionsArgsSchema>;
 
 // Schema for update data passed to the API (without id, which is passed separately)
 export const UpdateTransactionDataSchema = UpdateTransactionArgsSchema.omit({ id: true });
