@@ -319,6 +319,7 @@ describe('buildInitConfig', () => {
     delete process.env.ACTUAL_SERVER_URL;
     delete process.env.ACTUAL_PASSWORD;
     delete process.env.ACTUAL_SESSION_TOKEN;
+    delete process.env.ACTUAL_VERBOSE;
   });
 
   afterEach(() => {
@@ -333,6 +334,7 @@ describe('buildInitConfig', () => {
       dataDir: '/data',
       serverURL: 'https://example.invalid',
       sessionToken: 'token-123',
+      verbose: false,
     });
   });
 
@@ -345,6 +347,7 @@ describe('buildInitConfig', () => {
       dataDir: '/data',
       serverURL: 'https://example.invalid',
       sessionToken: 'token-123',
+      verbose: false,
     });
     expect(consoleError).toHaveBeenCalledOnce();
   });
@@ -356,13 +359,19 @@ describe('buildInitConfig', () => {
       dataDir: '/data',
       serverURL: 'https://example.invalid',
       password: 'secret',
+      verbose: false,
     });
+  });
+
+  it('turns loot-core verbose logging on only when ACTUAL_VERBOSE=true', () => {
+    process.env.ACTUAL_VERBOSE = 'true';
+    expect(buildInitConfig('/data')).toEqual({ dataDir: '/data', verbose: true });
   });
 
   it('ignores credentials when no server URL is set', () => {
     process.env.ACTUAL_SESSION_TOKEN = 'token-123';
     process.env.ACTUAL_PASSWORD = 'secret';
-    expect(buildInitConfig('/data')).toEqual({ dataDir: '/data' });
+    expect(buildInitConfig('/data')).toEqual({ dataDir: '/data', verbose: false });
   });
 });
 
