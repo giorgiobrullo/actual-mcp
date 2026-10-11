@@ -198,6 +198,32 @@ describe('update-transaction tool', () => {
       expect(result.isError).toBeUndefined();
     });
 
+    it('should turn the whole transaction into a transfer via transfer_account_id', async () => {
+      vi.mocked(updateTransaction).mockResolvedValue(undefined);
+      vi.mocked(getPayees).mockResolvedValue([
+        { id: 'payee-savings', name: 'Transfer: Savings', transfer_acct: 'savings-account-id' },
+      ]);
+
+      const result = await handler({
+        id: 'txn-123',
+        payee: 'payee-ignored',
+        transfer_account_id: 'savings-account-id',
+      });
+
+      expect(updateTransaction).toHaveBeenCalledWith('txn-123', { payee: 'payee-savings' });
+      expect(result.isError).toBeUndefined();
+    });
+
+    it('should return error when the transaction transfer payee is not found', async () => {
+      vi.mocked(getPayees).mockResolvedValue([]);
+
+      const result = await handler({ id: 'txn-123', transfer_account_id: 'nonexistent-account-id' });
+
+      expect(result.isError).toBe(true);
+      expect((result.content[0] as { text: string }).text).toContain('No transfer payee found');
+      expect(updateTransaction).not.toHaveBeenCalled();
+    });
+
     it('should return error when a subtransaction transfer payee is not found', async () => {
       vi.mocked(getPayees).mockResolvedValue([]);
 

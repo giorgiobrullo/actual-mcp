@@ -93,6 +93,15 @@ export function getRules(): Promise<RuleEntity[]> {
   return getActualConnection().run(() => api.getRules());
 }
 
+export type Schedule = Awaited<ReturnType<typeof api.getSchedules>>[number];
+
+/**
+ * Returns every schedule (recurring or one-off planned transaction) in the loaded budget.
+ */
+export function getSchedules(): Promise<Schedule[]> {
+  return getActualConnection().run(() => api.getSchedules());
+}
+
 /**
  * Creates a payee and returns its identifier.
  */
