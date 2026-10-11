@@ -2,6 +2,11 @@
 
 MCP server for integrating Actual Budget with Claude and other LLM assistants.
 
+> **Fork of [s-stefanov/actual-mcp](https://github.com/s-stefanov/actual-mcp).** It adds `batch-update-transactions`,
+> `get-schedules`, whole-transaction transfers in `update-transaction` (`transfer_account_id`), and `notes` /
+> `uncategorized` filters on `get-transactions`. See [Fork notes](#fork-notes) for building against a local Actual
+> checkout.
+
 ## Overview
 
 The Actual Budget MCP Server allows you to interact with your personal financial data from [Actual Budget](https://actualbudget.com/) using natural language through LLMs. It exposes your accounts, transactions, and financial metrics through the Model Context Protocol (MCP).
@@ -18,9 +23,11 @@ The Actual Budget MCP Server allows you to interact with your personal financial
 
 #### Transaction & Account Management
 
-- **`get-transactions`** - Retrieve and filter transactions by account, date, amount, category, or payee
+- **`get-transactions`** - Retrieve and filter transactions by account, date, amount, category, payee, notes, or uncategorized status
 - **`create-transaction`** - Create a new transaction in an account with optional category, payee, and notes
-- **`update-transaction`** - Update an existing transaction with new category, payee, notes, or amount
+- **`update-transaction`** - Update an existing transaction with new category, payee, notes, or amount, or turn it into a transfer
+- **`batch-update-transactions`** - Apply up to 100 transaction updates in one call (bulk categorization, transfers)
+- **`get-schedules`** - List scheduled transactions with their amount, frequency, and next date
 - **`get-accounts`** - Retrieve a list of all accounts with their current balance and ID
 - **`balance-history`** - View account balance changes over time
 
@@ -365,6 +372,27 @@ but is not yet listed as a registry package.)
 
 Post-release directory listings are tracked in
 [`docs/mcp-registry-checklist.md`](./docs/mcp-registry-checklist.md).
+
+## Fork notes
+
+`@actual-app/api` and `@actual-app/core` point at a sibling checkout of
+[giorgiobrullo/actual](https://github.com/giorgiobrullo/actual) (`file:../actual/packages/...`), so the MCP server runs the
+same loot-core as the deployed sync server: same migrations, and the fork's custom bank sync providers work through
+`run-bank-sync`.
+
+```bash
+# in ../actual (after rebasing or pulling)
+yarn install
+yarn workspace @actual-app/api build   # also regenerates loot-core's @types used for type-checking
+
+# in actual-mcp
+npm install
+npm run build
+```
+
+`tsconfig.json` maps `@actual-app/core/*` and loot-core's `#...` package imports to the generated `@types`, and
+`vitest.config.ts` aliases `@actual-app/api` to its built bundle, because the linked packages otherwise resolve to raw
+TypeScript sources. To use the published npm packages instead, set both dependencies back to a version number.
 
 ## License
 
