@@ -19,17 +19,19 @@ const DEFAULT_SYNC_TTL_MS = 60_000;
  */
 export function buildInitConfig(dataDir: string): InitConfig {
   const serverURL = process.env.ACTUAL_SERVER_URL;
+  // Reason: loot-core's verbose logger writes to stdout, which is the JSON-RPC channel in stdio mode.
+  const verbose = process.env.ACTUAL_VERBOSE === 'true';
   // Reason: InitConfig is a discriminated union in 26.x — NoServerConfig forbids serverURL/password,
   // and password and sessionToken are mutually exclusive.
-  if (!serverURL) return { dataDir };
+  if (!serverURL) return { dataDir, verbose };
   const sessionToken = process.env.ACTUAL_SESSION_TOKEN;
   if (sessionToken) {
     if (process.env.ACTUAL_PASSWORD) {
       console.error('Both ACTUAL_SESSION_TOKEN and ACTUAL_PASSWORD are set; using ACTUAL_SESSION_TOKEN.');
     }
-    return { dataDir, serverURL, sessionToken };
+    return { dataDir, serverURL, sessionToken, verbose };
   }
-  return { dataDir, serverURL, password: process.env.ACTUAL_PASSWORD ?? '' };
+  return { dataDir, serverURL, password: process.env.ACTUAL_PASSWORD ?? '', verbose };
 }
 
 type ConnectionState = 'idle' | 'initializing' | 'ready' | 'closing' | 'closed' | 'failed';

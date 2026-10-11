@@ -145,6 +145,9 @@ export ACTUAL_BUDGET_SYNC_ID="your-budget-id"
 # How long downloaded data stays fresh before the server re-syncs, in ms
 # (default: 60000). Use 0 to sync before every call, or -1 to never sync.
 export ACTUAL_SYNC_TTL_MS="60000"
+
+# Actual's own sync logging goes to stdout, which breaks stdio MCP; it is off unless this is "true"
+export ACTUAL_VERBOSE="false"
 ```
 
 Optional: separate encryption budget password
