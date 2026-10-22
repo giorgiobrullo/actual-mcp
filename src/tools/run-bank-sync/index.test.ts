@@ -7,6 +7,8 @@ vi.mock('../../actual-api.js', () => ({
 
 import { runBankSync } from '../../actual-api.js';
 
+const nothingSynced = { newTransactions: [], matchedTransactions: [], updatedAccounts: [] };
+
 describe('run-bank-sync tool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,7 +28,7 @@ describe('run-bank-sync tool', () => {
 
   describe('handler - happy path', () => {
     it('should sync specific account when accountId provided', async () => {
-      vi.mocked(runBankSync).mockResolvedValue(undefined);
+      vi.mocked(runBankSync).mockResolvedValue(nothingSynced);
 
       const result = await handler({ accountId: 'acc-123' });
 
@@ -36,7 +38,7 @@ describe('run-bank-sync tool', () => {
     });
 
     it('should sync all accounts when no accountId provided', async () => {
-      vi.mocked(runBankSync).mockResolvedValue(undefined);
+      vi.mocked(runBankSync).mockResolvedValue(nothingSynced);
 
       const result = await handler({});
 
@@ -46,7 +48,7 @@ describe('run-bank-sync tool', () => {
     });
 
     it('should sync onbudget accounts with special value', async () => {
-      vi.mocked(runBankSync).mockResolvedValue(undefined);
+      vi.mocked(runBankSync).mockResolvedValue(nothingSynced);
 
       const result = await handler({ accountId: 'onbudget' });
 
@@ -55,12 +57,24 @@ describe('run-bank-sync tool', () => {
     });
 
     it('should sync offbudget accounts with special value', async () => {
-      vi.mocked(runBankSync).mockResolvedValue(undefined);
+      vi.mocked(runBankSync).mockResolvedValue(nothingSynced);
 
       const result = await handler({ accountId: 'offbudget' });
 
       expect(runBankSync).toHaveBeenCalledWith('offbudget');
       expect((result.content[0] as { text: string }).text).toContain('off-budget');
+    });
+
+    it('should report what the sync reconciled', async () => {
+      vi.mocked(runBankSync).mockResolvedValue({
+        newTransactions: ['t1', 't2'],
+        matchedTransactions: ['t3'],
+        updatedAccounts: ['acc-123'],
+      });
+
+      const result = await handler({ accountId: 'acc-123' });
+
+      expect((result.content[0] as { text: string }).text).toContain('2 new, 1 matched, 1 account(s) updated.');
     });
   });
 

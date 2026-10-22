@@ -39,7 +39,7 @@ export async function handler(args: RunBankSyncArgs): Promise<CallToolResult> {
     // - "onbudget" → sync on-budget accounts
     // - "offbudget" → sync off-budget accounts
     // - undefined → sync ALL linked accounts
-    await runBankSync(accountId);
+    const result = await runBankSync(accountId);
 
     // Build user-friendly response
     let message: string;
@@ -52,6 +52,10 @@ export async function handler(args: RunBankSyncArgs): Promise<CallToolResult> {
     } else {
       message = `Bank sync completed for account: ${accountId}`;
     }
+
+    message +=
+      ` ${result.newTransactions.length} new, ${result.matchedTransactions.length} matched, ` +
+      `${result.updatedAccounts.length} account(s) updated.`;
 
     return success(message);
   } catch (err) {

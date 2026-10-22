@@ -232,7 +232,7 @@ export function deleteTransaction(id: string): Promise<unknown> {
 /**
  * Runs bank synchronization for one account or all linked accounts.
  */
-export function runBankSync(accountId?: string): Promise<void> {
+export function runBankSync(accountId?: string): ReturnType<typeof api.runBankSync> {
   return getActualConnection().run(() => api.runBankSync(accountId ? { accountId } : undefined));
 }
 
